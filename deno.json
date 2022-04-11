@@ -1,0 +1,6 @@
+{
+  "tasks": {
+    "start": "deno run --allow-net --watch main.ts",
+    "test": "deno test --reload --coverage=cov_profile"
+  }
+}

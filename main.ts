@@ -1,24 +1,4 @@
-import { json, PathParams, serve } from "https://deno.land/x/sift@0.4.2/mod.ts";
-
-serve({
-  "/": () => new Response("hello world"),
-  "/books": () => {
-    return json(books);
-  },
-  "/books/:id": (_request: Request, params: PathParams) => {
-    if (params === undefined) {
-      return Response.error();
-    }
-    const book = books.find((book) => book.isbn === params.id);
-    if (book === undefined) {
-      return new Response(`Unknown id: ${params.id}`);
-    }
-    return json(book);
-  },
-  // The route handler of 404 will be invoked when a route handler
-  // for the requested path is not found.
-  404: () => new Response("not found"),
-});
+import { Application, Router } from "https://deno.land/x/oak/mod.ts";
 
 interface Book {
   isbn: string;
@@ -39,3 +19,36 @@ const books: Array<Book> = [{
   author: "Andreas A. Antonopoulos",
   title: "Mastering Bitcoin",
 }];
+
+const router = new Router();
+
+router.get("/", (context) => context.response.body = "Hello World!")
+  .get("/books", (context) => {
+    context.response.body = books;
+  })
+  .get("/books/:id", (context) => {
+    const book = books.find((book) => book.isbn === context.params.id);
+    console.log(book);
+    context.response.body = book;
+  });
+
+const app = new Application();
+
+// Logger
+app.use(async (ctx, next) => {
+  await next();
+  const rt = ctx.response.headers.get("X-Response-Time");
+  console.log(`${ctx.request.method} ${ctx.request.url} - ${rt}`);
+});
+
+// Timing
+app.use(async (ctx, next) => {
+  const start = Date.now();
+  await next();
+  const ms = Date.now() - start;
+  ctx.response.headers.set("X-Response-Time", `${ms}ms`);
+});
+
+app.use(router.routes());
+app.use(router.allowedMethods());
+await app.listen({ port: 8000 });
